@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner</title>
+</head>
+<body>
+    <h1>Scan QR Code and Share Link</h1>
+    <video id="preview" width="300" height="300"></video>
+    <button id="scanBtn">Scan QR</button>
+    <p id="linkDisplay"></p>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script>
+        const socket = io();
+        const video = document.getElementById('preview');
+        const scanBtn = document.getElementById('scanBtn');
+        const linkDisplay = document.getElementById('linkDisplay');
+
+        async function startScanner() {
+            const codeReader = new ZXing.BrowserQRCodeReader();
+            const devices = await codeReader.listVideoInputDevices();
+            if (devices.length > 0) {
+                codeReader.decodeFromVideoDevice(devices[0].deviceId, video, (result, err) => {
+                    if (result) {
+                        const link = result.text;
+                        socket.emit('qrScanned', link);
+                        openLink(link);
+                        codeReader.reset();
+                    }
+                });
+            }
+        }
+
+        function openLink(link) {
+            linkDisplay.innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+            window.open(link, "_blank"); // فتح الرابط تلقائيًا
+        }
+
+        scanBtn.addEventListener('click', () => {
+            startScanner();
+        });
+
+        socket.on('newQrLink', (link) => {
+            openLink(link);
+        });
+
+        socket.on('clearLink', () => {
+            linkDisplay.innerHTML = "";
+        });
+    </script>
+</body>
+</html>
